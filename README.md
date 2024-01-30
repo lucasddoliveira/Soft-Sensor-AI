@@ -4,8 +4,9 @@ A soft sensor is a software-based system that uses data analysis, mathematical m
 
 This repository aims to serve the development of a soft sensor, resulting from the partnership between UFPB (Federal University of Paraiba) and Cagepa (water and sewage company of Paraiba), which will be used in maintenance operations at a Cagepa facility.
 
---- CollectAndSendData: Folder dedicated to the structure of reading, collecting inputs, and utilizing the AI model to receive output and send it back to the broker;
---- AIModel: Folder dedicated to hosting/building the AI model.
+1. **CollectAndSendData:** Folder dedicated to the structure of reading, collecting inputs, and utilizing the AI model to receive output and send it back to the broker;
+
+2. **AIModel:** Folder dedicated to hosting/building the AI model.
 
 # Soft Sensor utilizando Inteligência Artificial
 
@@ -13,5 +14,6 @@ Um soft sensor é um sistema baseado em software que utiliza análise de dados, 
 
 Este repositório tem como objetivo servir ao desenvolvimento de um soft sensor, resultado da parceria entre a UFPB (Universidade Federal da Paraíba) e a Cagepa (companhia de águas e esgotos da Paraíba), que será utilizado em operações de manutenção em uma instalação da Cagepa.
 
---- CollectAndSendData: Pasta destinada à estrutura de leitura, coleta de inputs e utilização do modelo de IA para receber output e enviá-lo de volta ao broker;
---- AIModel: Pasta dedicada à hospedagem/construção do modelo de IA.
+1. **CollectAndSendData:** Pasta destinada à estrutura de leitura, coleta de inputs e utilização do modelo de IA para receber output e enviá-lo de volta ao broker;
+
+2. **AIModel:** Pasta dedicada à hospedagem/construção do modelo de IA.
