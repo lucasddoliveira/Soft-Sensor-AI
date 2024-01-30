@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pytz
 import time
 import threading
-print("hi")
+
 def on_message(client, userdata, message):
     payload = message.payload.decode('utf-8')
     try:
