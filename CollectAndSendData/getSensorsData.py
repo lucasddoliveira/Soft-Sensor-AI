@@ -47,7 +47,7 @@ def on_message(client, userdata, message):
                 return
 
         if counter == 4:
-            print("..")
+            
             fuso_horario = pytz.timezone('America/Sao_Paulo')
             hora_atual = datetime.now(fuso_horario)
             leitura[0] = hora_atual
