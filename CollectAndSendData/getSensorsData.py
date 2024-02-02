@@ -1,13 +1,12 @@
-import paho.mqtt.client as mqtt
+import os
 import json
+import paho.mqtt.client as mqtt
 from datetime import datetime, timedelta
 import pytz
 import mysql.connector
 import time
-import threading
-import pandas as pd
-import os
 from dotenv import load_dotenv
+#import SoftSensor from './'
 
 load_dotenv()
 
@@ -19,13 +18,12 @@ MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
 
 MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
 MYSQL_USERNAME = os.getenv('MYSQL_USERNAME')
-MYSQL_URI = os.getenv('MYSQL_URI')
-MYSQL_TABLE = os.getenv('MYSQL_URI')
-MYSQL_DATABASE = os.getenv('MYSQL_URI')
+MYSQL_URL = os.getenv('MYSQL_URL')
+MYSQL_TABLE = os.getenv('MYSQL_TABLE')
+MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
 
 counter = 0
 leitura = [0,0,0,0,0,0]
-df = pd.DataFrame(columns=["DP_995796", "DP_564065", "DP_035903", "DP_012072", "DP_862640"])
 
 def on_message(client, userdata, message):
     global counter, leitura, df  # Add these lines to declare counter, leitura, and df as global variables
@@ -53,7 +51,7 @@ def on_message(client, userdata, message):
             leitura[0] = hora_atual
 
             cnx = mysql.connector.connect(
-                host=MYSQL_URI,
+                host=MYSQL_URL,
                 user=MYSQL_USERNAME,
                 password=MYSQL_PASSWORD,
                 database=MYSQL_DATABASE
@@ -62,7 +60,6 @@ def on_message(client, userdata, message):
             cursor = cnx.cursor()
             cursor.execute('INSERT INTO '+str(MYSQL_TABLE)+' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640) VALUES (%s, %s, %s, %s, %s, %s)', leitura)
 
-
             cnx.commit()
             cursor.close()
             cnx.close()
@@ -70,6 +67,9 @@ def on_message(client, userdata, message):
             counter = 0
             leitura = [0,0,0,0,0,0]
 
+            #softSensorValue = SoftSensor(leitura[1],  leitura[2], leitura[3], leitura[4], leitura[5])
+
+            #publicar de voltar no broker softSensorValue
 
             return
 
