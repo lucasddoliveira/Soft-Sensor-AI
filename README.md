@@ -2,7 +2,7 @@
 
 A soft sensor is a software-based system that uses data analysis, mathematical models, or machine learning to estimate or predict the behavior of a physical system or process. It operates similarly to a physical sensor but doesn't require direct measurement, instead relying on available data to generate insights or predictions about the system it monitors. Soft sensors are valuable in scenarios where installing physical sensors is challenging or expensive, providing estimations for variables that are difficult to measure directly. They find applications in industries like manufacturing, agriculture, and more, aiding in process optimization, predictive maintenance, and decision-making.
 
-This repository aims to serve the development of a soft sensor, resulting from the partnership between UFPB (Federal University of Paraiba) and Cagepa (water and sewage company of Paraiba), which will be used in maintenance operations at a Cagepa facility.
+This repository aims to serve the development of a soft sensor, resulting from the partnership between UFPB (Federal University of Paraiba) and Cagepa (water and sewage company of Paraiba), which will be used in maintenance operations at a Cagepa facility!
 
 1. **CollectAndSendData:** Folder dedicated to the structure of reading, collecting inputs, and utilizing the AI model to receive output and send it back to the broker;
 
