@@ -2,16 +2,17 @@ import os
 import json
 import paho.mqtt.client as mqtt
 from datetime import datetime, timedelta
+import threading
 import pytz
 import mysql.connector
 import time
 from dotenv import load_dotenv
-#import SoftSensor from './'
 
 load_dotenv()
 
 MQTT_BROKER = os.getenv('MQTT_BROKER')
-MQTT_TOPIC = os.getenv('MQTT_TOPIC')
+MQTT_SUBSCRIBE_TOPIC = os.getenv('MQTT_SUBSCRIBE_TOPIC')
+MQTT_PUBLISH_TOPIC = os.getenv('MQTT_PUBLISH_TOPIC')
 MQTT_PORT = int(os.getenv('MQTT_PORT'))
 MQTT_USERNAME = os.getenv('MQTT_USERNAME')
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
@@ -26,13 +27,13 @@ counter = 0
 leitura = [0,0,0,0,0,0]
 
 def on_message(client, userdata, message):
-    global counter, leitura, df  # Add these lines to declare counter, leitura, and df as global variables
+    global counter, leitura, df
     payload = message.payload.decode('utf-8')
 
     try:
         if counter < 5:
             if('DP_995796' in message.topic):
-                leitura[1]= float(payload)  # This will print the parsed JSON data
+                leitura[1]= float(payload) 
             elif('DP_564065' in message.topic):
                 leitura[2]= float(payload)
             elif('DP_035903' in message.topic):
@@ -47,9 +48,9 @@ def on_message(client, userdata, message):
         if counter == 4:
             
             fuso_horario = pytz.timezone('America/Sao_Paulo')
-            hora_atual = datetime.now(fuso_horario)
-            leitura[0] = hora_atual
+            leitura[0] = datetime.now(fuso_horario)
 
+            
             cnx = mysql.connector.connect(
                 host=MYSQL_URL,
                 user=MYSQL_USERNAME,
@@ -63,14 +64,14 @@ def on_message(client, userdata, message):
             cnx.commit()
             cursor.close()
             cnx.close()
+            
+
+            #softSensorValue = SoftSensor(leitura[1],  leitura[2], leitura[3], leitura[4], leitura[5])
+            publishSoftSensor(leitura[1]*2)
 
             counter = 0
             leitura = [0,0,0,0,0,0]
-
-            #softSensorValue = SoftSensor(leitura[1],  leitura[2], leitura[3], leitura[4], leitura[5])
-
-            #publicar de voltar no broker softSensorValue
-
+            
             return
 
         counter += 1
@@ -81,30 +82,27 @@ def on_message(client, userdata, message):
 def on_disconnect(client, userdata, rc):
     print("Conexão perdida. Tentando reconectar...")
     print(rc)
-    time.sleep(5)  # Aguarda 5 segundos antes de tentar reconectar
+    time.sleep(5)  
     client.reconnect()
 
-def alert():
-    while True:
-        print('SERVER ON')
-        time.sleep(20)
+def publishSoftSensor(softSensorValue):
+    global client
+    client.publish(MQTT_PUBLISH_TOPIC, softSensorValue)
 
-# Criação de um cliente MQTT
 client = mqtt.Client()
 client.on_message = on_message
 client.on_disconnect = on_disconnect
 client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 
-#thread = threading.Thread(target=alert)
-#thread.daemon = True  # Define a thread como um daemon para encerrar junto com o programa principal
-#thread.start()
+thread = threading.Thread(target=publishSoftSensor(505))
+thread.daemon = True 
+thread.start()
 
-# Loop de reconexão
 while True:
     try:
         # Conecta-se ao broker MQTT
         client.connect(MQTT_BROKER, port= MQTT_PORT)
-        client.subscribe(MQTT_TOPIC)
+        client.subscribe(MQTT_SUBSCRIBE_TOPIC)
         # Mantém a conexão e lida com as mensagens recebidas
         client.loop_forever()
     except KeyboardInterrupt:
