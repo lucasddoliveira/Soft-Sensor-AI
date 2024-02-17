@@ -6,7 +6,10 @@ import threading
 import pytz
 import mysql.connector
 import time
+from AIModel.aiModel_LSTM import SoftSensor
 from dotenv import load_dotenv
+import warnings
+warnings.filterwarnings('ignore')
 
 load_dotenv()
 
@@ -24,7 +27,7 @@ MYSQL_TABLE = os.getenv('MYSQL_TABLE')
 MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
 
 counter = 0
-leitura = [0,0,0,0,0,0]
+leitura = [0,0,0,0,0,0,0]
 
 def on_message(client, userdata, message):
     global counter, leitura, df
@@ -46,11 +49,13 @@ def on_message(client, userdata, message):
                 return
 
         if counter == 4:
-            
             fuso_horario = pytz.timezone('America/Sao_Paulo')
-            leitura[0] = datetime.now(fuso_horario)
+            leitura[0] = datetime.now(fuso_horario).replace(tzinfo=None)
 
+            softSensorValue = SoftSensor(leitura)
             
+            leitura[6] = softSensorValue
+
             cnx = mysql.connector.connect(
                 host=MYSQL_URL,
                 user=MYSQL_USERNAME,
@@ -59,18 +64,16 @@ def on_message(client, userdata, message):
             )
 
             cursor = cnx.cursor()
-            cursor.execute('INSERT INTO '+str(MYSQL_TABLE)+' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640) VALUES (%s, %s, %s, %s, %s, %s)', leitura)
+            cursor.execute('INSERT INTO '+str(MYSQL_TABLE)+' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, softSensorValue) VALUES (%s, %s, %s, %s, %s, %s, %s)', leitura)
 
             cnx.commit()
             cursor.close()
             cnx.close()
             
-
-            #softSensorValue = SoftSensor(leitura[1],  leitura[2], leitura[3], leitura[4], leitura[5])
-            publishSoftSensor(leitura[1]*2)
+            publishSoftSensor(softSensorValue)
 
             counter = 0
-            leitura = [0,0,0,0,0,0]
+            leitura = [0,0,0,0,0,0,0]
             
             return
 
