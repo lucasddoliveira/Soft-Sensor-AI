@@ -64,7 +64,7 @@ def SoftSensor(inputData):
 
     def preprocessar_dados(data):
 
-        data.rename(columns={'timestamp':'Tempo', 'DP_995796':'nivel','DP_564065': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_862640':'vazao_(t)', 'softSensorValue':'softSensorValue'}, inplace=True)
+        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'softSensorValue':'softSensorValue'}, inplace=True)
         data.index = data['Tempo']
         data['Tempo'] = pd.to_datetime(data['Tempo'])
         #data.drop(columns = ['Tempo','Unnamed: 0', 'vazao'],inplace=True)
