@@ -8,9 +8,9 @@ This repository aims to serve the development of a soft sensor, resulting from t
 
 2. **AIModel:** Folder dedicated to hosting/building the AI model.
 
-# Soft Sensor utilizando Inteligência Artificial
+# Sensor Virtual utilizando Inteligência Artificial
 
-Um soft sensor é um sistema baseado em software que utiliza análise de dados, modelos matemáticos ou aprendizado de máquina para estimar ou prever o comportamento de um sistema ou processo físico. Ele opera de forma similar a um sensor físico, porém não requer medição direta, em vez disso, confia em dados disponíveis para gerar insights ou previsões sobre o sistema que monitora. Soft sensors são valiosos em cenários onde a instalação de sensores físicos é desafiadora ou cara, fornecendo estimativas para variáveis que são difíceis de medir diretamente. Eles encontram aplicações em indústrias como manufatura, agricultura e mais, auxiliando na otimização de processos, manutenção preditiva e tomada de decisões.
+Um soft virtual ou soft sensor é um sistema baseado em software que utiliza análise de dados, modelos matemáticos ou aprendizado de máquina para estimar ou prever o comportamento de um sistema ou processo físico. Ele opera de forma similar a um sensor físico, porém não requer medição direta, em vez disso, confia em dados disponíveis para gerar insights ou previsões sobre o sistema que monitora. Soft sensors são valiosos em cenários onde a instalação de sensores físicos é desafiadora ou cara, fornecendo estimativas para variáveis que são difíceis de medir diretamente. Eles encontram aplicações em indústrias como manufatura, agricultura e mais, auxiliando na otimização de processos, manutenção preditiva e tomada de decisões.
 
 Este repositório tem como objetivo servir ao desenvolvimento de um soft sensor, resultado da parceria entre a UFPB (Universidade Federal da Paraíba) e a Cagepa (companhia de águas e esgotos da Paraíba), que será utilizado em operações de manutenção em uma instalação da Cagepa.
 
