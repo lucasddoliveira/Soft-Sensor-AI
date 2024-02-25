@@ -51,9 +51,11 @@ def on_message(client, userdata, message):
         if counter == 4:
             fuso_horario = pytz.timezone('America/Sao_Paulo')
             leitura[0] = datetime.now(fuso_horario).replace(tzinfo=None)
-
-            softSensorValue = SoftSensor(leitura)
-            
+            try:
+                softSensorValue = SoftSensor(leitura)
+            except:
+                return
+                
             leitura[6] = softSensorValue
 
             cnx = mysql.connector.connect(
