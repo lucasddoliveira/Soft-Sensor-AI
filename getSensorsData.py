@@ -33,6 +33,7 @@ leitura = [0,0,0,0,0,0,0,0]
 def on_message(client, userdata, message):
     global counter, leitura, df
     payload = message.payload.decode('utf-8')
+    
 
     try:
         if counter < 5:
@@ -53,11 +54,9 @@ def on_message(client, userdata, message):
             fuso_horario = pytz.timezone('America/Sao_Paulo')
             leitura[0] = datetime.now(fuso_horario).replace(tzinfo=None)
 
-            try:
-                softSensorValue = SoftSensor(leitura)
-            except:
-                return
-               
+            softSensorValue = SoftSensor(leitura)
+            print(softSensorValue)
+
             leitura[6] = softSensorValue[0] #LSTM
             leitura[7] = softSensorValue[1] #MLP
             
