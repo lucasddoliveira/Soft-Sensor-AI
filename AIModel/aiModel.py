@@ -61,20 +61,24 @@ def SoftSensor(inputData):
         predDenorm_LSTM = Denormalize(pred_LSTM, data_Y)
 
         # Predição MLP
-        data_MLP, data_Y = preprocessar_LSTM(data)
+
+        data_MLP, data_Y = preprocessar_MLP(data)
         pred_MLP = model_MLP.predict(data_MLP)
         predDenorm_MLP = Denormalize(pred_MLP, data_Y)
 
         return predDenorm_LSTM, predDenorm_MLP
 
-    def preprocessar_LSTM(data):
-
-        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'softSensorValue':'softSensorValue'}, inplace=True)
+    def preprocessar_LSTM(input_data):
+        
+        data = input_data.copy()
+        
+        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue'}, inplace=True)
         data.index = data['Tempo']
         data['Tempo'] = pd.to_datetime(data['Tempo'])
         #data.drop(columns = ['Tempo','Unnamed: 0', 'vazao'],inplace=True)
         data.drop(columns = ['Tempo'],inplace=True)
-        data.drop(columns = ['softSensorValue'],inplace=True)
+        data.drop(columns = ['LSTMValue'],inplace=True)
+        data.drop(columns = ['MLPValue'],inplace=True)
         # Mascara Booleana para variavel vazão_recalque
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
@@ -91,13 +95,16 @@ def SoftSensor(inputData):
 
         return Xn, data_Y
     
-    def preprocessar_MLP(data):
-
-        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'softSensorValue':'softSensorValue'}, inplace=True)
+    def preprocessar_MLP(input_data1):
+        
+        data = input_data1.copy()
+        
+        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue'}, inplace=True)
         data.index = data['Tempo']
         data['Tempo'] = pd.to_datetime(data['Tempo'])
         data.drop(columns = ['Tempo'],inplace=True)
-        data.drop(columns = ['softSensorValue'],inplace=True)
+        data.drop(columns = ['LSTMValue'],inplace=True)
+        data.drop(columns = ['MLPValue'],inplace=True)
         # Mascara Booleana para variavel vazão_recalque
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
@@ -132,7 +139,7 @@ def SoftSensor(inputData):
 
     # Leitura dos dados do SQL
     df = pd.read_sql(query, connection)
-    new_row_df = pd.DataFrame([inputData], columns=['timestamp', 'DP_995796','DP_564065','DP_012072','DP_035903','DP_862640', 'softSensorValue'])
+    new_row_df = pd.DataFrame([inputData], columns=['timestamp', 'DP_995796','DP_564065','DP_012072','DP_035903','DP_862640', 'LSTMValue', 'MLPValue'])
     df = pd.concat([new_row_df, df], ignore_index=True)
     
     #Predição
@@ -144,4 +151,4 @@ def SoftSensor(inputData):
     softSensorMLP = round(float(pred_MLP[0][0]), 2)
 
     #print(f"Previsão da vazão: {softSensorValue}")
-    return softSensorLSTM, softSensorMLP
+    return [softSensorLSTM, softSensorMLP]
