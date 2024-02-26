@@ -134,7 +134,7 @@ def SoftSensor(inputData):
     model_LSTM = tf.keras.models.load_model(model_path_LSTM)
 
     # Modelo MLP
-    model_path_MLP = os.path.join(script_dir, './modeloMLP16neurons_v1.h5')
+    model_path_MLP = os.path.join(script_dir, './modeloMLP8Neuronsv2.keras')
     model_MLP = tf.keras.models.load_model(model_path_MLP)
 
     # Leitura dos dados do SQL
