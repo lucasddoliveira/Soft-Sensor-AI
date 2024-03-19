@@ -17,14 +17,13 @@ def SoftSensor(inputData):
     MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
 
     connection= mysql.connector.connect(
-                    host=MYSQL_URL,
-                    user=MYSQL_USERNAME,
-                    password=MYSQL_PASSWORD,
-                    database=MYSQL_DATABASE
-                )
+        host=MYSQL_URL,
+        user=MYSQL_USERNAME,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DATABASE
+    )
 
     query = "SELECT * FROM " + str(MYSQL_TABLE) + " ORDER BY timestamp DESC LIMIT 10"
-
 
     def transform_data(window_size, X, y):
         '''
@@ -54,19 +53,23 @@ def SoftSensor(inputData):
         data_min = data.min()
         return data_normalized*(data_max-data_min) + data_min
 
-    def predict_flow(data, model_LSTM, model_MLP):
+    def predict_flow(data, model_LSTM, model_CNN, model_MLP):
         # Predição LSTM
         data_LSTM, data_Y = preprocessar_LSTM(data)
         pred_LSTM = model_LSTM.predict(data_LSTM)
         predDenorm_LSTM = Denormalize(pred_LSTM, data_Y)
 
-        # Predição MLP
+        # Predição CNN
+        data_CNN, data_Y = preprocessar_LSTM(data)
+        pred_CNN = model_CNN.predict(data_CNN)
+        predDenorm_CNN = Denormalize(pred_CNN, data_Y)
 
+        # Predição MLP
         data_MLP, data_Y = preprocessar_MLP(data)
         pred_MLP = model_MLP.predict(data_MLP)
         predDenorm_MLP = Denormalize(pred_MLP, data_Y)
 
-        return predDenorm_LSTM, predDenorm_MLP
+        return predDenorm_LSTM, predDenorm_CNN, predDenorm_MLP
 
     def preprocessar_LSTM(input_data):
         
@@ -79,6 +82,7 @@ def SoftSensor(inputData):
         data.drop(columns = ['Tempo'],inplace=True)
         data.drop(columns = ['LSTMValue'],inplace=True)
         data.drop(columns = ['MLPValue'],inplace=True)
+        data.drop(columns = ['CNNValue'],inplace=True)
         # Mascara Booleana para variavel vazão_recalque
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
@@ -105,23 +109,32 @@ def SoftSensor(inputData):
         data.drop(columns = ['Tempo'],inplace=True)
         data.drop(columns = ['LSTMValue'],inplace=True)
         data.drop(columns = ['MLPValue'],inplace=True)
+        data.drop(columns = ['CNNValue'],inplace=True)
         # Mascara Booleana para variavel vazão_recalque
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
         data.loc[(data['vazao_recalque'] > 0), 'vazao_recalque'] = 1
 
-        x1 = data
-        x2 = x1.shift(1).rename(columns={'nivel':'nivel(t-1)','pressao':'pressao(t-1)','vazao_recalque':'vazao_recalque(t-1)', 'pressao_recalque':'pressao_recalque(t-1)','vazao_(t)':'vazao_(t-1)'})
-        x3 = x1.shift(2).rename(columns={'nivel':'nivel(t-2)','pressao':'pressao(t-2)','vazao_recalque':'vazao_recalque(t-2)', 'pressao_recalque':'pressao_recalque(t-2)','vazao_(t)':'vazao_(t-2)'})
-        x4 = x1.shift(3).rename(columns={'nivel':'nivel(t-3)','pressao':'pressao(t-3)','vazao_recalque':'vazao_recalque(t-3)', 'pressao_recalque':'pressao_recalque(t-3)','vazao_(t)':'vazao_(t-3)'})
-        x5 = x1.shift(4).rename(columns={'nivel':'nivel(t-4)','pressao':'pressao(t-4)','vazao_recalque':'vazao_recalque(t-4)', 'pressao_recalque':'pressao_recalque(t-4)','vazao_(t)':'vazao_(t-4)'})
+        shifts = 5
+        dfs = []
 
-        y1 = x1.shift(-1).rename(columns={'nivel':'nivel(t+1)','pressao':'pressao(t+1)','vazao_recalque':'vazao_recalque(t+1)', 'pressao_recalque':'pressao_recalque(t+1)','vazao_(t)':'vazao_(t+1)'})
-        
-        dataShift = pd.concat([x1,x2,x3,x4,x5,y1],axis=1).dropna(axis=0)
+        for i in range(-1, shifts + 1):
+            shifted_df = data.shift(i)
+            if i>0:
+                renamed_columns = {col: f"{col}(t-{i})" for col in shifted_df.columns}
+            elif(i==0):
+                renamed_columns = {col: f"{col}" for col in shifted_df.columns}
+            else:
+                renamed_columns = {col: f"{col}(t+{-i})" for col in shifted_df.columns}
+            shifted_df = shifted_df.rename(columns=renamed_columns)
+            dfs.append(shifted_df)
 
-        data_X = dataShift.iloc[:, 0:29].drop(dataShift.columns[[4]], axis=1)
-        data_Y = dataShift.iloc[:, 29]
+        y1, x0, x1, x2, x3, x4, x5 = dfs
+
+        dataShift = pd.concat([x0,x1,x2,x3,x4,x5,y1],axis=1).dropna(axis=0)
+
+        data_X = dataShift.iloc[:, 0:30]
+        data_Y = dataShift.iloc[:, 34]
 
         Xn = Normalize(data_X)
         return Xn, data_Y
@@ -133,22 +146,25 @@ def SoftSensor(inputData):
     model_path_LSTM = os.path.join(script_dir, 'modeloLSTM20neurons.h5')
     model_LSTM = tf.keras.models.load_model(model_path_LSTM)
 
+    # Modelo CNN
+    model_path_CNN = os.path.join(script_dir, 'modeloCNN8neurons_v1.h5')
+    model_CNN = tf.keras.models.load_model(model_path_CNN)
+
     # Modelo MLP
-    model_path_MLP = os.path.join(script_dir, 'modeloMLP8Neuron_v3')
+    model_path_MLP = os.path.join(script_dir, 'modeloMLP30neurons_v4.h5')
     model_MLP = tf.keras.models.load_model(model_path_MLP)
 
     # Leitura dos dados do SQL
     df = pd.read_sql(query, connection)
-    new_row_df = pd.DataFrame([inputData], columns=['timestamp', 'DP_995796','DP_564065','DP_012072','DP_035903','DP_862640', 'LSTMValue', 'MLPValue'])
+    new_row_df = pd.DataFrame([inputData], columns=['timestamp', 'DP_995796','DP_564065','DP_012072','DP_035903','DP_862640', 'LSTMValue', 'MLPValue', 'CNNValue'])
     df = pd.concat([new_row_df, df], ignore_index=True)
-    
-    #Predição
-    pred_LSTM, pred_MLP = predict_flow(df, model_LSTM, model_MLP)
-
     connection.close()
 
+    #Predição
+    pred_LSTM, pred_CNN, pred_MLP = predict_flow(df, model_LSTM, model_CNN, model_MLP)
     softSensorLSTM = round(float(pred_LSTM[0][0]), 2)
-    softSensorMLP = round(float(pred_MLP[0][0]), 2)
+    softSensorMLP  = round(float(pred_MLP[0][0]), 2)
+    softSensorCNN  = round(float(pred_CNN[0][0]), 2)
 
     #print(f"Previsão da vazão: {softSensorValue}")
-    return [softSensorLSTM, softSensorMLP]
+    return [softSensorLSTM, softSensorMLP, softSensorCNN]

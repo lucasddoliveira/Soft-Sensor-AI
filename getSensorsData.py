@@ -17,6 +17,7 @@ MQTT_BROKER = os.getenv('MQTT_BROKER')
 MQTT_SUBSCRIBE_TOPIC = os.getenv('MQTT_SUBSCRIBE_TOPIC')
 MQTT_PUBLISH_TOPIC1 = os.getenv('MQTT_PUBLISH_TOPIC1')
 MQTT_PUBLISH_TOPIC2 = os.getenv('MQTT_PUBLISH_TOPIC2')
+MQTT_PUBLISH_TOPIC3 = os.getenv('MQTT_PUBLISH_TOPIC3')
 MQTT_PORT = int(os.getenv('MQTT_PORT'))
 MQTT_USERNAME = os.getenv('MQTT_USERNAME')
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
@@ -28,7 +29,7 @@ MYSQL_TABLE = os.getenv('MYSQL_TABLE')
 MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
 
 counter = 0
-leitura = [0,0,0,0,0,0,0,0]
+leitura = [0,0,0,0,0,0,0,0,0]
 
 def on_message(client, userdata, message):
     global counter, leitura, df
@@ -55,10 +56,11 @@ def on_message(client, userdata, message):
             leitura[0] = datetime.now(fuso_horario).replace(tzinfo=None)
 
             softSensorValue = SoftSensor(leitura)
-            print(softSensorValue)
-
+            print('LSTM: '+str(softSensorValue[0])+' | MLP: '+str(softSensorValue[1])+' | CNN: '+str(softSensorValue[2]))
+            
             leitura[6] = softSensorValue[0] #LSTM
             leitura[7] = softSensorValue[1] #MLP
+            leitura[8] = softSensorValue[2] #CNN
             
             cnx = mysql.connector.connect(
                 host=MYSQL_URL,
@@ -68,7 +70,7 @@ def on_message(client, userdata, message):
             )
 
             cursor = cnx.cursor()
-            cursor.execute('INSERT INTO '+str(MYSQL_TABLE)+' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)', leitura)
+            cursor.execute('INSERT INTO '+str(MYSQL_TABLE)+' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)', leitura)
 
             cnx.commit()
             cursor.close()
@@ -77,7 +79,7 @@ def on_message(client, userdata, message):
             publishSoftSensor(softSensorValue)
             
             counter = 0
-            leitura = [0,0,0,0,0,0,0,0]
+            leitura = [0,0,0,0,0,0,0,0,0]
             
             return
 
@@ -94,15 +96,17 @@ def on_disconnect(client, userdata, rc):
 
 def publishSoftSensor(softSensorValue):
     global client
-    client.publish(MQTT_PUBLISH_TOPIC1, softSensorValue[0])
-    client.publish(MQTT_PUBLISH_TOPIC2, softSensorValue[1])
+    if(softSensorValue!=[505,505,505]):
+        client.publish(MQTT_PUBLISH_TOPIC1, softSensorValue[0])
+        client.publish(MQTT_PUBLISH_TOPIC2, softSensorValue[1])
+        client.publish(MQTT_PUBLISH_TOPIC3, softSensorValue[2])
 
 client = mqtt.Client()
 client.on_message = on_message
 client.on_disconnect = on_disconnect
 client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 
-thread = threading.Thread(target=publishSoftSensor([505,505]))
+thread = threading.Thread(target=publishSoftSensor([505,505,505]))
 thread.daemon = True 
 thread.start()
 
