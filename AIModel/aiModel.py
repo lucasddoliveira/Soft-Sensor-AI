@@ -162,9 +162,9 @@ def SoftSensor(inputData):
 
     #Predição
     pred_LSTM, pred_CNN, pred_MLP = predict_flow(df, model_LSTM, model_CNN, model_MLP)
-    softSensorLSTM = round(float(pred_LSTM[0][0]), 2)
-    softSensorMLP  = round(float(pred_MLP[0][0]), 2)
-    softSensorCNN  = round(float(pred_CNN[0][0]), 2)
+    softSensorLSTM = round(float(pred_LSTM[0][0]), 3)
+    softSensorMLP  = round(float(pred_MLP[0][0]), 3)
+    softSensorCNN  = round(float(pred_CNN[0][0]), 3)
 
     #print(f"Previsão da vazão: {softSensorValue}")
     return [softSensorLSTM, softSensorMLP, softSensorCNN]
