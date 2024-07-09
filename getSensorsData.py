@@ -9,6 +9,7 @@ import time
 from AIModel.aiModel import SoftSensor
 from dotenv import load_dotenv
 import warnings
+import numpy as np
 warnings.filterwarnings('ignore')
 
 load_dotenv()
@@ -74,6 +75,9 @@ def on_message(client, userdata, message):
             leitura[6] = softSensorValue[0]  # LSTM
             leitura[7] = softSensorValue[1]  # MLP
             leitura[8] = softSensorValue[2]  # CNN
+
+            if np.isnan(leitura[7]):
+                        leitura[7] = leitura[6]
             
             cnx = mysql.connector.connect(
                 host=MYSQL_URL,
