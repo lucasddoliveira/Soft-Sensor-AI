@@ -87,6 +87,8 @@ def SoftSensor(inputData):
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
         data.loc[(data['vazao_recalque'] > 0), 'vazao_recalque'] = 1
+        # determina ordem que as features devem estar dispostas
+        df = df[['nivel', 'pressao', 'vazao_recalque', 'pressao_recalque', 'vazao_(t)']]
         data_X = data.iloc[:, 0:5]
         data_Y = data.iloc[:, 4]
 
