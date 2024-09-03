@@ -42,6 +42,20 @@ def SoftSensor(inputData):
         X_transformed = np.array(X_transformed)
         y_transformed = np.array(y_transformed)
         return X_transformed, y_transformed
+    
+    # função utilizada no AutoEncoder
+    def transform_X(window_size, X):
+        '''
+        Inputs:
+        X -> array de dados de entrada
+        Outputs:
+        X_transformed -> array de dados de entrada transformado com window_size
+        '''
+        X_transformed = []
+        for i in range(len(X) - window_size):
+            X_transformed.append(X[i:i+window_size])
+        X_transformed = np.array(X_transformed)
+        return X_transformed
 
     def Normalize(data):
         data_max = data.max()
@@ -53,7 +67,7 @@ def SoftSensor(inputData):
         data_min = data.min()
         return data_normalized*(data_max-data_min) + data_min
 
-    def predict_flow(data, model_LSTM, model_CNN, model_MLP):
+    def predict_flow(data, model_LSTM, model_CNN, model_MLP, modelo_AUTO):
         # Predição LSTM
         data_LSTM, data_Y = preprocessar_LSTM(data)
         pred_LSTM = model_LSTM.predict(data_LSTM)
@@ -69,7 +83,16 @@ def SoftSensor(inputData):
         pred_MLP = model_MLP.predict(data_MLP)
         predDenorm_MLP = Denormalize(pred_MLP, data_Y)
 
-        return predDenorm_LSTM, predDenorm_CNN, predDenorm_MLP
+        # Predição AUTOE
+
+        data_Xn, data_AUTO = preprocessar_AUTO(data)
+        pred_AUTO = model_AUTO.predict(data_Xn)
+        media_Xn = np.mean(data_Xn, axis=1)
+        media_AUTO = np.mean(pred_AUTO, axis=1)
+        predDenorm_AUTO = Denormalize(media_AUTO, data_AUTO)
+
+
+        return predDenorm_LSTM, predDenorm_CNN, predDenorm_MLP, predDenorm_AUTO
 
     def preprocessar_LSTM(input_data):
         
@@ -87,6 +110,8 @@ def SoftSensor(inputData):
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
         data.loc[(data['vazao_recalque'] > 0), 'vazao_recalque'] = 1
+        # determina ordem que as features devem estar dispostas
+        data = data[['nivel', 'pressao', 'vazao_recalque', 'pressao_recalque', 'vazao_(t)']]
         data_X = data.iloc[:, 0:5]
         data_Y = data.iloc[:, 4]
 
@@ -114,6 +139,7 @@ def SoftSensor(inputData):
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
         data.loc[(data['vazao_recalque'] > 0), 'vazao_recalque'] = 1
+        data = data[['nivel', 'pressao', 'vazao_recalque', 'pressao_recalque', 'vazao_(t)']]
 
         shifts = 5
         dfs = []
@@ -138,6 +164,31 @@ def SoftSensor(inputData):
 
         Xn = Normalize(data_X)
         return Xn, data_Y
+    
+    def preprocessar_AUTO(input_data2):
+        data = input_data2.copy()
+        
+        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue'}, inplace=True)
+        data.index = data['Tempo']
+        data['Tempo'] = pd.to_datetime(data['Tempo'])
+        data.drop(columns = ['Tempo'],inplace=True)
+        data.drop(columns = ['LSTMValue'],inplace=True)
+        data.drop(columns = ['MLPValue'],inplace=True)
+        data.drop(columns = ['CNNValue'],inplace=True)
+        
+        data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
+        data.loc[(data['vazao_recalque'] > 0), 'vazao_recalque'] = 1
+        # assegura a ordem das features
+        data = data[['nivel', 'pressao', 'vazao_recalque', 'pressao_recalque', 'vazao_(t)']]
+
+        data_AUTO = data.iloc[:, 0:5]
+        window_size = 10
+        data_AUTO = transform_X(window_size,data_AUTO)
+
+        data_Xn = Normalize(data_AUTO)
+
+        return data_Xn, data_AUTO
+
 
     #Carregar modelo
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -154,6 +205,10 @@ def SoftSensor(inputData):
     model_path_MLP = os.path.join(script_dir, 'modeloMLP30neurons_v4.h5')
     model_MLP = tf.keras.models.load_model(model_path_MLP)
 
+    # Modelo AUTO
+    model_path_AUTO = os.path.join(script_dir, 'modeloAutoEncoder_50Neurons_v1.h5')
+    model_AUTO = tf.keras.models.load_model(model_path_AUTO)
+
     # Leitura dos dados do SQL
     df = pd.read_sql(query, connection)
     new_row_df = pd.DataFrame([inputData], columns=['timestamp', 'DP_995796','DP_564065','DP_012072','DP_035903','DP_862640', 'LSTMValue', 'MLPValue', 'CNNValue'])
@@ -161,10 +216,11 @@ def SoftSensor(inputData):
     connection.close()
 
     #Predição
-    pred_LSTM, pred_CNN, pred_MLP = predict_flow(df, model_LSTM, model_CNN, model_MLP)
+    pred_LSTM, pred_CNN, pred_MLP, pred_AUTO = predict_flow(df, model_LSTM, model_CNN, model_MLP, model_AUTO)
     softSensorLSTM = round(float(pred_LSTM[0][0]), 2)
     softSensorMLP  = round(float(pred_MLP[0][0]), 2)
     softSensorCNN  = round(float(pred_CNN[0][0]), 2)
+    softSensorAUTO = round(float(pred_AUTO[0][0]), 2)
 
     #print(f"Previsão da vazão: {softSensorValue}")
-    return [softSensorLSTM, softSensorMLP, softSensorCNN]
+    return [softSensorLSTM, softSensorMLP, softSensorCNN, softSensorAUTO]
