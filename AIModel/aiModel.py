@@ -111,7 +111,11 @@ def SoftSensor(inputData):
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
         data.loc[(data['vazao_recalque'] > 0), 'vazao_recalque'] = 1
         # determina ordem que as features devem estar dispostas
+<<<<<<< HEAD
         data = data[['nivel', 'pressao', 'vazao_recalque', 'pressao_recalque', 'vazao_(t)']]
+=======
+        df = df[['nivel', 'pressao', 'vazao_recalque', 'pressao_recalque', 'vazao_(t)']]
+>>>>>>> 64e85beca9ad3b65c675c3642fe60fb0c6af59b5
         data_X = data.iloc[:, 0:5]
         data_Y = data.iloc[:, 4]
 
@@ -216,6 +220,7 @@ def SoftSensor(inputData):
     connection.close()
 
     #Predição
+<<<<<<< HEAD
     pred_LSTM, pred_CNN, pred_MLP, pred_AUTO = predict_flow(df, model_LSTM, model_CNN, model_MLP, model_AUTO)
     softSensorLSTM = round(float(pred_LSTM[0][0]), 2)
     softSensorMLP  = round(float(pred_MLP[0][0]), 2)
@@ -224,3 +229,12 @@ def SoftSensor(inputData):
 
     #print(f"Previsão da vazão: {softSensorValue}")
     return [softSensorLSTM, softSensorMLP, softSensorCNN, softSensorAUTO]
+=======
+    pred_LSTM, pred_CNN, pred_MLP = predict_flow(df, model_LSTM, model_CNN, model_MLP)
+    softSensorLSTM = round(float(pred_LSTM[0][0]), 3)
+    softSensorMLP  = round(float(pred_MLP[0][0]), 3)
+    softSensorCNN  = round(float(pred_CNN[0][0]), 3)
+
+    #print(f"Previsão da vazão: {softSensorValue}")
+    return [softSensorLSTM, softSensorMLP, softSensorCNN]
+>>>>>>> 64e85beca9ad3b65c675c3642fe60fb0c6af59b5

@@ -9,6 +9,7 @@ import time
 from AIModel.aiModel import SoftSensor
 from dotenv import load_dotenv
 import warnings
+import numpy as np
 warnings.filterwarnings('ignore')
 
 load_dotenv()
@@ -30,37 +31,53 @@ MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
 
 counter = 0
 leitura = [0,0,0,0,0,0,0,0,0]
+ultima_leitura = [None, None, None, None, None, None, None, None, None]
 
 def on_message(client, userdata, message):
-    global counter, leitura, df
+    global counter, leitura, df, ultima_leitura
     payload = message.payload.decode('utf-8')
     
-
     try:
         if counter < 5:
-            if('DP_995796' in message.topic):
-                leitura[1]= float(payload) 
-            elif('DP_564065' in message.topic):
-                leitura[2]= float(payload)
-            elif('DP_035903' in message.topic):
-                leitura[3]= float(payload)
-            elif('DP_012072' in message.topic):
-                leitura[4]= float(payload)
-            elif('DP_862640' in message.topic):
-                leitura[5]= float(payload)
+            if 'DP_995796' in message.topic:
+                leitura[1] = float(payload)
+            elif 'DP_564065' in message.topic:
+                leitura[2] = float(payload)
+            elif 'DP_035903' in message.topic:
+                leitura[3] = float(payload)
+            elif 'DP_012072' in message.topic:
+                leitura[4] = float(payload)
+            elif 'DP_862640' in message.topic:
+                leitura[5] = float(payload)
             else:
                 return
 
-        if counter == 4:
+        if counter == 4 and all(value != 0 for value in leitura[1:6]):
+            # Verificar se as leituras dos sensores são iguais à última leitura válida
+            if any(leitura[i] == ultima_leitura[i] for i in range(1, 6)):
+                print(leitura[1:6])
+                print(ultima_leitura[1:6])
+                print('Leitura duplicada, ignorando pacote.')
+
+                counter = 0
+                leitura = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                return
+            
             fuso_horario = pytz.timezone('America/Sao_Paulo')
             leitura[0] = datetime.now(fuso_horario).replace(tzinfo=None)
 
-            softSensorValue = SoftSensor(leitura)
-            print('LSTM: '+str(softSensorValue[0])+' | MLP: '+str(softSensorValue[1])+' | CNN: '+str(softSensorValue[2]))
             
-            leitura[6] = softSensorValue[0] #LSTM
-            leitura[7] = softSensorValue[1] #MLP
-            leitura[8] = softSensorValue[2] #CNN
+            
+            print(leitura)
+            softSensorValue = SoftSensor(leitura)
+            print('LSTM: ' + str(softSensorValue[0]) + ' | MLP: ' + str(softSensorValue[1]) + ' | CNN: ' + str(softSensorValue[2]))
+            
+            leitura[6] = softSensorValue[0]  # LSTM
+            leitura[7] = softSensorValue[1]  # MLP
+            leitura[8] = softSensorValue[2]  # CNN
+
+            if np.isnan(leitura[7]):
+                        leitura[7] = leitura[6]
             
             cnx = mysql.connector.connect(
                 host=MYSQL_URL,
@@ -70,7 +87,7 @@ def on_message(client, userdata, message):
             )
 
             cursor = cnx.cursor()
-            cursor.execute('INSERT INTO '+str(MYSQL_TABLE)+' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)', leitura)
+            cursor.execute('INSERT INTO ' + str(MYSQL_TABLE) + ' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)', leitura)
 
             cnx.commit()
             cursor.close()
@@ -78,8 +95,11 @@ def on_message(client, userdata, message):
             
             publishSoftSensor(softSensorValue)
             
+            # Atualizar a última leitura válida
+            ultima_leitura = leitura.copy()
+            
             counter = 0
-            leitura = [0,0,0,0,0,0,0,0,0]
+            leitura = [0, 0, 0, 0, 0, 0, 0, 0, 0]
             
             return
 
