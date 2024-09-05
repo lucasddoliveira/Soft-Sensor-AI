@@ -98,7 +98,7 @@ def SoftSensor(inputData):
         
         data = input_data.copy()
         
-        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AUTOENCODER':'AUTOENCODER'}, inplace=True)
+        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AENivel':'AENivel', 'AEPressao':'AEPressao', 'AEVazaoRecalque':'AEVazaoRecalque', 'AEPressaoRecalque': 'AEPressaoRecalque', 'AEVazao': 'AEVazao'}, inplace=True)
         data.index = data['Tempo']
         data['Tempo'] = pd.to_datetime(data['Tempo'])
         #data.drop(columns = ['Tempo','Unnamed: 0', 'vazao'],inplace=True)
@@ -106,7 +106,11 @@ def SoftSensor(inputData):
         data.drop(columns = ['LSTMValue'],inplace=True)
         data.drop(columns = ['MLPValue'],inplace=True)
         data.drop(columns = ['CNNValue'],inplace=True)
-        data.drop(columns = ['AUTOENCODER'],inplace=True)
+        data.drop(columns = ['AENivel'],inplace=True)
+        data.drop(columns = ['AEPressao'],inplace=True)
+        data.drop(columns = ['AEVazaoRecalque'],inplace=True)
+        data.drop(columns = ['AEPressaoRecalque'],inplace=True)
+        data.drop(columns = ['AEVazao'],inplace=True)
         # Mascara Booleana para variavel vazão_recalque
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
@@ -129,14 +133,18 @@ def SoftSensor(inputData):
         
         data = input_data1.copy()
         
-        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AUTOENCODER':'AUTOENCODER'}, inplace=True)
+        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AENivel':'AENivel', 'AEPressao':'AEPressao', 'AEVazaoRecalque':'AEVazaoRecalque', 'AEPressaoRecalque': 'AEPressaoRecalque', 'AEVazao': 'AEVazao'}, inplace=True)
         data.index = data['Tempo']
         data['Tempo'] = pd.to_datetime(data['Tempo'])
         data.drop(columns = ['Tempo'],inplace=True)
         data.drop(columns = ['LSTMValue'],inplace=True)
         data.drop(columns = ['MLPValue'],inplace=True)
         data.drop(columns = ['CNNValue'],inplace=True)
-        data.drop(columns = ['AUTOENCODER'],inplace=True)
+        data.drop(columns = ['AENivel'],inplace=True)
+        data.drop(columns = ['AEPressao'],inplace=True)
+        data.drop(columns = ['AEVazaoRecalque'],inplace=True)
+        data.drop(columns = ['AEPressaoRecalque'],inplace=True)
+        data.drop(columns = ['AEVazao'],inplace=True)
         # Mascara Booleana para variavel vazão_recalque
         # vazão-recalque -> ativação da bomba p aumentar o nivel de agua no reservatorio (1-ligada 0-desligada)
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
@@ -170,14 +178,18 @@ def SoftSensor(inputData):
     def preprocessar_AUTO(input_data2):
         data = input_data2.copy()
         
-        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AUTOENCODER':'AUTOENCODER'}, inplace=True)
+        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AENivel':'AENivel', 'AEPressao':'AEPressao', 'AEVazaoRecalque':'AEVazaoRecalque', 'AEPressaoRecalque': 'AEPressaoRecalque', 'AEVazao': 'AEVazao'}, inplace=True)
         data.index = data['Tempo']
         data['Tempo'] = pd.to_datetime(data['Tempo'])
         data.drop(columns = ['Tempo'],inplace=True)
         data.drop(columns = ['LSTMValue'],inplace=True)
         data.drop(columns = ['MLPValue'],inplace=True)
         data.drop(columns = ['CNNValue'],inplace=True)
-        data.drop(columns = ['AUTOENCODER'],inplace=True)
+        data.drop(columns = ['AENivel'],inplace=True)
+        data.drop(columns = ['AEPressao'],inplace=True)
+        data.drop(columns = ['AEVazaoRecalque'],inplace=True)
+        data.drop(columns = ['AEPressaoRecalque'],inplace=True)
+        data.drop(columns = ['AEVazao'],inplace=True)
         
         data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
         data.loc[(data['vazao_recalque'] > 0), 'vazao_recalque'] = 1
@@ -214,7 +226,7 @@ def SoftSensor(inputData):
 
     # Leitura dos dados do SQL
     df = pd.read_sql(query, connection)
-    new_row_df = pd.DataFrame([inputData], columns=['timestamp', 'DP_995796','DP_564065','DP_012072','DP_035903','DP_862640', 'LSTMValue', 'MLPValue', 'CNNValue', 'AUTOENCODER'])
+    new_row_df = pd.DataFrame([inputData], columns=['timestamp', 'DP_995796','DP_564065','DP_012072','DP_035903','DP_862640', 'LSTMValue', 'MLPValue', 'CNNValue', 'AENivel', 'AEPressao', 'AEVazaoRecalque', 'AEPressaoRecalque', 'AEVazao'])
     df = pd.concat([new_row_df, df], ignore_index=True)
     connection.close()
 
@@ -223,7 +235,7 @@ def SoftSensor(inputData):
     softSensorLSTM = round(float(pred_LSTM[0][0]), 3)
     softSensorMLP  = round(float(pred_MLP[0][0]), 3)
     softSensorCNN  = round(float(pred_CNN[0][0]), 3)
-    softSensorAUTO  = round(float(pred_AUTO[0][0]), 3)
+    softSensorAUTO  = np.round(pred_AUTO.astype(float),3)
 
     #print(f"Previsão da vazão: {softSensorValue}")
     return [softSensorLSTM, softSensorMLP, softSensorCNN, softSensorAUTO]

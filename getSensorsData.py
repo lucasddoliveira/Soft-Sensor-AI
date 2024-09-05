@@ -20,6 +20,10 @@ MQTT_PUBLISH_TOPIC1 = os.getenv('MQTT_PUBLISH_TOPIC1')
 MQTT_PUBLISH_TOPIC2 = os.getenv('MQTT_PUBLISH_TOPIC2')
 MQTT_PUBLISH_TOPIC3 = os.getenv('MQTT_PUBLISH_TOPIC3')
 MQTT_PUBLISH_TOPIC4 = os.getenv('MQTT_PUBLISH_TOPIC4')
+MQTT_PUBLISH_TOPIC5 = os.getenv('MQTT_PUBLISH_TOPIC5')
+MQTT_PUBLISH_TOPIC6 = os.getenv('MQTT_PUBLISH_TOPIC6')
+MQTT_PUBLISH_TOPIC7 = os.getenv('MQTT_PUBLISH_TOPIC7')
+MQTT_PUBLISH_TOPIC8 = os.getenv('MQTT_PUBLISH_TOPIC8')
 MQTT_PORT = int(os.getenv('MQTT_PORT'))
 MQTT_USERNAME = os.getenv('MQTT_USERNAME')
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
@@ -31,7 +35,7 @@ MYSQL_TABLE = os.getenv('MYSQL_TABLE')
 MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
 
 counter = 0
-leitura = [0,0,0,0,0,0,0,0,0,0]
+leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ultima_leitura = [None, None, None, None, None, None, None, None, None]
 
 def on_message(client, userdata, message):
@@ -61,22 +65,23 @@ def on_message(client, userdata, message):
                 print('Leitura duplicada, ignorando pacote.')
 
                 counter = 0
-                leitura = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
                 return
             
             fuso_horario = pytz.timezone('America/Sao_Paulo')
             leitura[0] = datetime.now(fuso_horario).replace(tzinfo=None)
 
-            
-            
-            print(leitura)
             softSensorValue = SoftSensor(leitura)
             print('LSTM: ' + str(softSensorValue[0]) + ' | MLP: ' + str(softSensorValue[1]) + ' | CNN: ' + str(softSensorValue[2]) + ' | AUTO: ' + str(softSensorValue[3]))
             
             leitura[6] = softSensorValue[0]  # LSTM
             leitura[7] = softSensorValue[1]  # MLP
             leitura[8] = softSensorValue[2]  # CNN
-            leitura[9] = softSensorValue[3]  # AUTO
+            leitura[9] = softSensorValue[3][0][0]  # AUTO
+            leitura[10] = softSensorValue[3][0][1]  # AUTO
+            leitura[11] = softSensorValue[3][0][2]  # AUTO
+            leitura[12] = softSensorValue[3][0][3]  # AUTO
+            leitura[13] = softSensorValue[3][0][4]  # AUTO
 
             if np.isnan(leitura[7]):
                         leitura[7] = leitura[6]
@@ -89,7 +94,7 @@ def on_message(client, userdata, message):
             )
 
             cursor = cnx.cursor()
-            cursor.execute('INSERT INTO ' + str(MYSQL_TABLE) + ' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue, AUTOENCODER) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', leitura)
+            cursor.execute('INSERT INTO ' + str(MYSQL_TABLE) + ' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue, AENivel, AEPressao, AEVazaoRecalque, AEPressaoRecalque, AEVazao ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s)', leitura)
 
             cnx.commit()
             cursor.close()
@@ -101,7 +106,7 @@ def on_message(client, userdata, message):
             ultima_leitura = leitura.copy()
             
             counter = 0
-            leitura = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
             
             return
 
@@ -122,7 +127,12 @@ def publishSoftSensor(softSensorValue):
         client.publish(MQTT_PUBLISH_TOPIC1, softSensorValue[0])
         client.publish(MQTT_PUBLISH_TOPIC2, softSensorValue[1])
         client.publish(MQTT_PUBLISH_TOPIC3, softSensorValue[2])
-        client.publish(MQTT_PUBLISH_TOPIC4, softSensorValue[3])
+        client.publish(MQTT_PUBLISH_TOPIC4, softSensorValue[3][0][0])
+        client.publish(MQTT_PUBLISH_TOPIC5, softSensorValue[3][0][1])
+        client.publish(MQTT_PUBLISH_TOPIC6, softSensorValue[3][0][2])
+        client.publish(MQTT_PUBLISH_TOPIC7, softSensorValue[3][0][3])
+        client.publish(MQTT_PUBLISH_TOPIC8, softSensorValue[3][0][4])
+
 
 client = mqtt.Client()
 client.on_message = on_message
