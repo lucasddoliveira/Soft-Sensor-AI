@@ -6,6 +6,13 @@ import os
 from silence_tensorflow import silence_tensorflow
 silence_tensorflow()
 import tensorflow as tf
+from teda_algo import TEDADetect
+import requests
+# token do bot gerado pelo BotFather (telegram)
+bot_token = "7160209549:AAEgSGm0T-XRbpPwHVROsTFHQNxE4lV8KOc"
+
+# ID do chat para onde as mensagens serão enviadas
+chat_id = "6412205514"
 
 def SoftSensor(inputData):
     load_dotenv()
@@ -84,7 +91,6 @@ def SoftSensor(inputData):
         predDenorm_MLP = Denormalize(pred_MLP, data_Y)
 
         # Predição AUTOE
-
         data_Xn, data_AUTO = preprocessar_AUTO(data)
         pred_AUTO = model_AUTO.predict(data_Xn)
         media_Xn = np.mean(data_Xn, axis=1)
@@ -177,33 +183,70 @@ def SoftSensor(inputData):
     
     def preprocessar_AUTO(input_data2):
         data = input_data2.copy()
-        
+
         data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AENivel':'AENivel', 'AEPressao':'AEPressao', 'AEVazaoRecalque':'AEVazaoRecalque', 'AEPressaoRecalque': 'AEPressaoRecalque', 'AEVazao': 'AEVazao'}, inplace=True)
         data.index = data['Tempo']
         data['Tempo'] = pd.to_datetime(data['Tempo'])
-        data.drop(columns = ['Tempo'],inplace=True)
-        data.drop(columns = ['LSTMValue'],inplace=True)
-        data.drop(columns = ['MLPValue'],inplace=True)
-        data.drop(columns = ['CNNValue'],inplace=True)
-        data.drop(columns = ['AENivel'],inplace=True)
-        data.drop(columns = ['AEPressao'],inplace=True)
-        data.drop(columns = ['AEVazaoRecalque'],inplace=True)
-        data.drop(columns = ['AEPressaoRecalque'],inplace=True)
-        data.drop(columns = ['AEVazao'],inplace=True)
+        # Remover colunas irrelevantes
+        cols_to_drop = ['Tempo', 'LSTMValue', 'MLPValue', 'CNNValue', 'AENivel',
+                    'AEPressao', 'AEVazaoRecalque', 'AEPressaoRecalque',
+                    'AEVazao', 'vazao_recalque']
+        data.drop(columns=cols_to_drop, inplace=True, errors='ignore')
         
-        data.loc[(data['vazao_recalque'] < 0), 'vazao_recalque'] = 0
-        data.loc[(data['vazao_recalque'] > 0), 'vazao_recalque'] = 1
         # assegura a ordem das features
-        data = data[['nivel', 'pressao', 'vazao_recalque', 'pressao_recalque', 'vazao_(t)']]
+        data = data[['nivel', 'pressao', 'pressao_recalque', 'vazao_(t)']]
 
-        data_AUTO = data.iloc[:, 0:5]
+        data_AUTO = data.iloc[:, 0:4]
         window_size = 10
         data_AUTO = transform_X(window_size,data_AUTO)
 
         data_Xn = Normalize(data_AUTO)
 
         return data_Xn, data_AUTO
+    
+    def enviar_alerta_telegram(mensagem):
+        """
+        Envia um alerta para o Telegram.
+        """
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        data = {"chat_id": chat_id, "text": mensagem}
+        response = requests.post(url, data=data)
 
+        
+    def processar_outliers(df):
+        """
+        Processa os dados, identifica outliers e envia alertas se >10% por hora.
+        """
+        df.rename('DP_995796':'vazao', inplace=True)
+        # garante o tratamento como dado de tempo
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+        # aplica TEDA
+        teda = TEDADetect()
+        teda.run(df[['timestamp', 'vazao']], ['vazao'], 2)
+
+        # Adicionar a coluna de outliers identificados
+        df['is_outlier'] = df['vazao'].apply(lambda x: 1 if teda.is_outlier(x) else 0)
+
+        # Agrupar os dados por hora
+        df['hour'] = df['timestamp'].dt.floor('H')
+        hourly_stats = df.groupby('hour').agg(
+            total=('is_outlier', 'size'),
+            outliers=('is_outlier', 'sum')
+        )
+
+        # Calcular o percentual de outliers
+        hourly_stats['outlier_percentage'] = (hourly_stats['outliers'] / hourly_stats['total']) * 100
+
+        # Verificar horas com mais de 10% de outliers e enviar alertas
+        for index, row in hourly_stats.iterrows():
+            if row['outlier_percentage'] > 10:
+                mensagem = (
+                    f"🚨 Alerta de Outliers 🚨\n"
+                    f"Na hora {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
+                    f"📊 Total de dados: {row['total']}, Outliers: {row['outliers']}."
+                )
+                enviar_alerta_telegram(mensagem)
 
     #Carregar modelo
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -221,7 +264,7 @@ def SoftSensor(inputData):
     model_MLP = tf.keras.models.load_model(model_path_MLP)
 
     # Modelo AUTO
-    model_path_AUTO = os.path.join(script_dir, 'modeloAutoEncoder_50Neurons_v1.h5')
+    model_path_AUTO = os.path.join(script_dir, 'best_modelAE_combination_3.h5')
     model_AUTO = tf.keras.models.load_model(model_path_AUTO)
 
     # Leitura dos dados do SQL
@@ -236,6 +279,8 @@ def SoftSensor(inputData):
     softSensorMLP  = round(float(pred_MLP[0][0]), 3)
     softSensorCNN  = round(float(pred_CNN[0][0]), 3)
     softSensorAUTO  = np.round(pred_AUTO.astype(float),3)
+
+    processar_outliers(inputData)
 
     #print(f"Previsão da vazão: {softSensorValue}")
     return [softSensorLSTM, softSensorMLP, softSensorCNN, softSensorAUTO]
