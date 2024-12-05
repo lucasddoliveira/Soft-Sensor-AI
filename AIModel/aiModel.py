@@ -184,7 +184,7 @@ def SoftSensor(inputData):
     def preprocessar_AUTO(input_data2):
         data = input_data2.copy()
 
-        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao_(t)', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AENivel':'AENivel', 'AEPressao':'AEPressao', 'AEVazaoRecalque':'AEVazaoRecalque', 'AEPressaoRecalque': 'AEPressaoRecalque', 'AEVazao': 'AEVazao'}, inplace=True)
+        data.rename(columns={'timestamp':'Tempo', 'DP_564065':'nivel','DP_862640': 'pressao', 'DP_012072':'vazao_recalque','DP_035903':'pressao_recalque', 'DP_995796':'vazao', 'LSTMValue':'LSTMValue','MLPValue':'MLPValue','AENivel':'AENivel', 'AEPressao':'AEPressao', 'AEVazaoRecalque':'AEVazaoRecalque', 'AEPressaoRecalque': 'AEPressaoRecalque', 'AEVazao': 'AEVazao'}, inplace=True)
         data.index = data['Tempo']
         data['Tempo'] = pd.to_datetime(data['Tempo'])
         # Remover colunas irrelevantes
@@ -194,7 +194,7 @@ def SoftSensor(inputData):
         data.drop(columns=cols_to_drop, inplace=True, errors='ignore')
         
         # assegura a ordem das features
-        data = data[['nivel', 'pressao', 'pressao_recalque', 'vazao_(t)']]
+        data = data[['nivel', 'pressao', 'pressao_recalque', 'vazao']]
 
         data_AUTO = data.iloc[:, 0:4]
         window_size = 10
@@ -217,36 +217,37 @@ def SoftSensor(inputData):
         """
         Processa os dados, identifica outliers e envia alertas se >10% por hora.
         """
-        df.rename('DP_995796':'vazao', inplace=True)
-        # garante o tratamento como dado de tempo
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
+    # Renomear a coluna para garantir consistência
+    df.rename(columns={'DP_995796': 'vazao'}, inplace=True)
 
-        # aplica TEDA
-        teda = TEDADetect()
-        teda.run(df[['timestamp', 'vazao']], ['vazao'], 2)
+    # Garante o tratamento como dado de tempo
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
 
-        # Adicionar a coluna de outliers identificados
-        df['is_outlier'] = df['vazao'].apply(lambda x: 1 if teda.is_outlier(x) else 0)
+    # Instanciar o objeto TEDADetect
+    teda = TEDADetect()
 
-        # Agrupar os dados por hora
-        df['hour'] = df['timestamp'].dt.floor('H')
-        hourly_stats = df.groupby('hour').agg(
-            total=('is_outlier', 'size'),
-            outliers=('is_outlier', 'sum')
-        )
+    # Adicionar uma nova coluna 'is_outlier' com os resultados
+    df['is_outlier'] = df['vazao'].apply(lambda x: teda.run([x], 2))  # Chama o método online
 
-        # Calcular o percentual de outliers
-        hourly_stats['outlier_percentage'] = (hourly_stats['outliers'] / hourly_stats['total']) * 100
+    # Agrupar os dados por hora
+    df['hour'] = df['timestamp'].dt.floor('H')
+    hourly_stats = df.groupby('hour').agg(
+        total=('is_outlier', 'size'),
+        outliers=('is_outlier', 'sum')
+    )
 
-        # Verificar horas com mais de 10% de outliers e enviar alertas
-        for index, row in hourly_stats.iterrows():
-            if row['outlier_percentage'] > 10:
-                mensagem = (
-                    f"🚨 Alerta de Outliers 🚨\n"
-                    f"Na hora {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
-                    f"📊 Total de dados: {row['total']}, Outliers: {row['outliers']}."
-                )
-                enviar_alerta_telegram(mensagem)
+    # Calcular o percentual de outliers
+    hourly_stats['outlier_percentage'] = (hourly_stats['outliers'] / hourly_stats['total']) * 100
+
+    # Verificar horas com mais de 10% de outliers e enviar alertas
+    for index, row in hourly_stats.iterrows():
+        if row['outlier_percentage'] > 10:
+            mensagem = (
+                f"🚨 Alerta de Outliers 🚨\n"
+                f"Na hora {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
+                f"📊 Total de dados: {row['total']}, Outliers: {row['outliers']}."
+            )
+            enviar_alerta_telegram(mensagem)
 
     #Carregar modelo
     script_dir = os.path.dirname(os.path.abspath(__file__))
