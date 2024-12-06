@@ -8,6 +8,7 @@ silence_tensorflow()
 import tensorflow as tf
 from .teda_algo import TEDADetect
 import requests
+from datetime import datetime, timedelta, timezone
 # token do bot gerado pelo BotFather (telegram)
 bot_token = "7160209549:AAEgSGm0T-XRbpPwHVROsTFHQNxE4lV8KOc"
 
@@ -249,7 +250,7 @@ def SoftSensor(inputData):
                 )
                 enviar_alerta_telegram(mensagem)
 
-                
+
     #Carregar modelo
     script_dir = os.path.dirname(os.path.abspath(__file__))
     print(tf.__version__, tf.keras.__version__)
@@ -282,7 +283,49 @@ def SoftSensor(inputData):
     softSensorCNN  = round(float(pred_CNN[0][0]), 3)
     softSensorAUTO  = np.round(pred_AUTO.astype(float),3)
     
-    processar_outliers(df)
+
+    conn = mysql.connector.connect(
+        host=MYSQL_URL,
+        user=MYSQL_USERNAME,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DATABASE
+    )
+
+    cursor = conn.cursor()
+
+    # Get the last run time
+    cursor.execute("SELECT ultimaAtualizacao FROM timestamp_table LIMIT 1;")
+    result = cursor.fetchone()
+
+    if result is None:
+        # If no row is found, insert one row with current timestamp
+        cursor.execute("INSERT INTO timestamp_table (ultimaAtualizacao) VALUES (CURRENT_TIMESTAMP);")
+        conn.commit()
+        print("Timestamp table initialized. Wait 6 hours for the next run.")
+        conn.close()
+    else:
+        last_run_time = result[0]  # This should be a datetime object from MySQL
+
+        # Ensure last_run_time is timezone-aware (assuming UTC)
+        if last_run_time.tzinfo is None:
+            last_run_time = last_run_time.replace(tzinfo=timezone.utc)
+
+        now = datetime.now(timezone.utc)
+        print(last_run_time)
+        print(now)
+
+        if (now - last_run_time) >= timedelta(hours=6):
+            # 6 hours have passed, run the process
+            processar_outliers(df)
+            
+            # Update the timestamp to current time
+            cursor.execute("UPDATE timestamp_table SET ultimaAtualizacao = CURRENT_TIMESTAMP;")
+            conn.commit()
+            print("Process executed and timestamp updated.")
+        else:
+            print("Not enough time has passed since the last run.")
+
+    conn.close()
 
     #print(f"Previsão da vazão: {softSensorValue}")
     return [softSensorLSTM, softSensorMLP, softSensorCNN, softSensorAUTO]
