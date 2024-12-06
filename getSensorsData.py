@@ -35,7 +35,7 @@ MYSQL_TABLE = os.getenv('MYSQL_TABLE')
 MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
 
 counter = 0
-leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0]
 ultima_leitura = [None, None, None, None, None, None, None, None, None]
 
 def on_message(client, userdata, message):
