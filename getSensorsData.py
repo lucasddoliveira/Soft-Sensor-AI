@@ -65,7 +65,7 @@ def on_message(client, userdata, message):
                 print('Leitura duplicada, ignorando pacote.')
 
                 counter = 0
-                leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0]
                 return
             
             fuso_horario = pytz.timezone('America/Sao_Paulo')
@@ -81,10 +81,11 @@ def on_message(client, userdata, message):
             leitura[10] = softSensorValue[3][0][1]  # AUTO
             leitura[11] = softSensorValue[3][0][2]  # AUTO
             leitura[12] = softSensorValue[3][0][3]  # AUTO
-            leitura[13] = softSensorValue[3][0][4]  # AUTO
 
             if np.isnan(leitura[7]):
                         leitura[7] = leitura[6]
+
+            print(leitura)
             
             cnx = mysql.connector.connect(
                 host=MYSQL_URL,
@@ -94,7 +95,7 @@ def on_message(client, userdata, message):
             )
 
             cursor = cnx.cursor()
-            cursor.execute('INSERT INTO ' + str(MYSQL_TABLE) + ' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue, AENivel, AEPressao, AEVazaoRecalque, AEPressaoRecalque, AEVazao ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s)', leitura)
+            cursor.execute('INSERT INTO ' + str(MYSQL_TABLE) + ' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue, AENivel, AEPressao, AEPressaoRecalque, AEVazao ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s)', leitura)
 
             cnx.commit()
             cursor.close()
@@ -106,7 +107,7 @@ def on_message(client, userdata, message):
             ultima_leitura = leitura.copy()
             
             counter = 0
-            leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+            leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0]
             
             return
 
@@ -131,7 +132,6 @@ def publishSoftSensor(softSensorValue):
         client.publish(MQTT_PUBLISH_TOPIC5, softSensorValue[3][0][1])
         client.publish(MQTT_PUBLISH_TOPIC6, softSensorValue[3][0][2])
         client.publish(MQTT_PUBLISH_TOPIC7, softSensorValue[3][0][3])
-        client.publish(MQTT_PUBLISH_TOPIC8, softSensorValue[3][0][4])
 
 
 client = mqtt.Client()
