@@ -35,7 +35,7 @@ MYSQL_TABLE = os.getenv('MYSQL_TABLE')
 MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
 
 counter = 0
-leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0]
+leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ultima_leitura = [None, None, None, None, None, None, None, None, None]
 
 def on_message(client, userdata, message):
@@ -65,7 +65,7 @@ def on_message(client, userdata, message):
                 print('Leitura duplicada, ignorando pacote.')
 
                 counter = 0
-                leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
                 return
             
             fuso_horario = pytz.timezone('America/Sao_Paulo')
@@ -95,7 +95,7 @@ def on_message(client, userdata, message):
             )
 
             cursor = cnx.cursor()
-            cursor.execute('INSERT INTO ' + str(MYSQL_TABLE) + ' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue, AENivel, AEPressao, AEPressaoRecalque, AEVazao ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s)', leitura)
+            cursor.execute('INSERT INTO ' + str(MYSQL_TABLE) + ' (timestamp, DP_995796, DP_564065, DP_035903, DP_012072, DP_862640, LSTMValue, MLPValue, CNNValue, AENivel, AEPressao, AEPressaoRecalque, AEVazao ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s)', leitura[0:-1])
 
             cnx.commit()
             cursor.close()
@@ -107,7 +107,7 @@ def on_message(client, userdata, message):
             ultima_leitura = leitura.copy()
             
             counter = 0
-            leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0]
+            leitura = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
             
             return
 
