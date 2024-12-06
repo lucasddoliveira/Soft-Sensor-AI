@@ -6,7 +6,7 @@ import os
 from silence_tensorflow import silence_tensorflow
 silence_tensorflow()
 import tensorflow as tf
-from teda_algo import TEDADetect
+from .teda_algo import TEDADetect
 import requests
 # token do bot gerado pelo BotFather (telegram)
 bot_token = "7160209549:AAEgSGm0T-XRbpPwHVROsTFHQNxE4lV8KOc"
@@ -217,37 +217,39 @@ def SoftSensor(inputData):
         """
         Processa os dados, identifica outliers e envia alertas se >10% por hora.
         """
-    # Renomear a coluna para garantir consistência
-    df.rename(columns={'DP_995796': 'vazao'}, inplace=True)
+        print(type(df))
+        # Renomear a coluna para garantir consistência
+        df.rename(columns={'DP_995796': 'vazao'}, inplace=True)
+        print('A')
+        # Garante o tratamento como dado de tempo
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        print('B')
+        # Instanciar o objeto TEDADetect
+        teda = TEDADetect()
+        print('C')
+        # Adicionar uma nova coluna 'is_outlier' com os resultados
+        df['is_outlier'] = df['vazao'].apply(lambda x: teda.run([x], 2))  # Chama o método online
+        print('D')
+        # Agrupar os dados por hora
+        df['hour'] = df['timestamp'].dt.floor('H')
+        hourly_stats = df.groupby('hour').agg(
+            total=('is_outlier', 'size'),
+            outliers=('is_outlier', 'sum')
+        )
 
-    # Garante o tratamento como dado de tempo
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+        print('E')
+        # Calcular o percentual de outliers
+        hourly_stats['outlier_percentage'] = (hourly_stats['outliers'] / hourly_stats['total']) * 100
 
-    # Instanciar o objeto TEDADetect
-    teda = TEDADetect()
-
-    # Adicionar uma nova coluna 'is_outlier' com os resultados
-    df['is_outlier'] = df['vazao'].apply(lambda x: teda.run([x], 2))  # Chama o método online
-
-    # Agrupar os dados por hora
-    df['hour'] = df['timestamp'].dt.floor('H')
-    hourly_stats = df.groupby('hour').agg(
-        total=('is_outlier', 'size'),
-        outliers=('is_outlier', 'sum')
-    )
-
-    # Calcular o percentual de outliers
-    hourly_stats['outlier_percentage'] = (hourly_stats['outliers'] / hourly_stats['total']) * 100
-
-    # Verificar horas com mais de 10% de outliers e enviar alertas
-    for index, row in hourly_stats.iterrows():
-        if row['outlier_percentage'] > 10:
-            mensagem = (
-                f"🚨 Alerta de Outliers 🚨\n"
-                f"Na hora {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
-                f"📊 Total de dados: {row['total']}, Outliers: {row['outliers']}."
-            )
-            enviar_alerta_telegram(mensagem)
+        # Verificar horas com mais de 10% de outliers e enviar alertas
+        for index, row in hourly_stats.iterrows():
+            if row['outlier_percentage'] > 10:
+                mensagem = (
+                    f"🚨 Alerta de Outliers 🚨\n"
+                    f"Na hora {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
+                    f"📊 Total de dados: {row['total']}, Outliers: {row['outliers']}."
+                )
+                enviar_alerta_telegram(mensagem)
 
     #Carregar modelo
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -280,8 +282,8 @@ def SoftSensor(inputData):
     softSensorMLP  = round(float(pred_MLP[0][0]), 3)
     softSensorCNN  = round(float(pred_CNN[0][0]), 3)
     softSensorAUTO  = np.round(pred_AUTO.astype(float),3)
-
-    processar_outliers(inputData)
+    
+    processar_outliers(df)
 
     #print(f"Previsão da vazão: {softSensorValue}")
     return [softSensorLSTM, softSensorMLP, softSensorCNN, softSensorAUTO]
