@@ -215,42 +215,41 @@ def SoftSensor(inputData):
         
     def processar_outliers(df):
         """
-        Processa os dados, identifica outliers e envia alertas se >10% por hora.
+        Processa os dados, identifica outliers e envia alertas se >10% a cada 6 horas.
         """
-        print(type(df))
         # Renomear a coluna para garantir consistência
         df.rename(columns={'DP_995796': 'vazao'}, inplace=True)
-        print('A')
+
         # Garante o tratamento como dado de tempo
         df['timestamp'] = pd.to_datetime(df['timestamp'])
-        print('B')
+
         # Instanciar o objeto TEDADetect
         teda = TEDADetect()
-        print('C')
+
         # Adicionar uma nova coluna 'is_outlier' com os resultados
         df['is_outlier'] = df['vazao'].apply(lambda x: teda.run([x], 2))  # Chama o método online
-        print('D')
-        # Agrupar os dados por hora
-        df['hour'] = df['timestamp'].dt.floor('H')
-        hourly_stats = df.groupby('hour').agg(
+
+        # Agrupar os dados em intervalos de 6 horas
+        df['6h_window'] = df['timestamp'].dt.floor('6H')
+        six_hour_stats = df.groupby('6h_window').agg(
             total=('is_outlier', 'size'),
             outliers=('is_outlier', 'sum')
         )
 
-        print('E')
         # Calcular o percentual de outliers
-        hourly_stats['outlier_percentage'] = (hourly_stats['outliers'] / hourly_stats['total']) * 100
+        six_hour_stats['outlier_percentage'] = (six_hour_stats['outliers'] / six_hour_stats['total']) * 100
 
-        # Verificar horas com mais de 10% de outliers e enviar alertas
-        for index, row in hourly_stats.iterrows():
+        # Verificar intervalos de 6 horas com mais de 10% de outliers e enviar alertas
+        for index, row in six_hour_stats.iterrows():
             if row['outlier_percentage'] > 10:
                 mensagem = (
                     f"🚨 Alerta de Outliers 🚨\n"
-                    f"Na hora {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
+                    f"No intervalo iniciado em {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
                     f"📊 Total de dados: {row['total']}, Outliers: {row['outliers']}."
                 )
                 enviar_alerta_telegram(mensagem)
 
+                
     #Carregar modelo
     script_dir = os.path.dirname(os.path.abspath(__file__))
     print(tf.__version__, tf.keras.__version__)
