@@ -218,34 +218,27 @@ def SoftSensor(inputData):
         """
         Processa os dados, identifica outliers e envia alertas se >10% a cada 6 horas.
         """
-        # Renomear a coluna para garantir consistência
         df.rename(columns={'DP_995796': 'vazao'}, inplace=True)
-
         # Garante o tratamento como dado de tempo
         df['timestamp'] = pd.to_datetime(df['timestamp'])
-
         # Instanciar o objeto TEDADetect
         teda = TEDADetect()
-
         # Adicionar uma nova coluna 'is_outlier' com os resultados
         df['is_outlier'] = df['vazao'].apply(lambda x: teda.run([x], 2))  # Chama o método online
-
-        # Agrupar os dados em intervalos de 6 horas
-        df['6h_window'] = df['timestamp'].dt.floor('6H')
-        six_hour_stats = df.groupby('6h_window').agg(
+        # Agrupar os dados por hora
+        df['hour'] = df['timestamp'].dt.floor('H')
+        hourly_stats = df.groupby('hour').agg(
             total=('is_outlier', 'size'),
             outliers=('is_outlier', 'sum')
         )
-
         # Calcular o percentual de outliers
-        six_hour_stats['outlier_percentage'] = (six_hour_stats['outliers'] / six_hour_stats['total']) * 100
-
-        # Verificar intervalos de 6 horas com mais de 10% de outliers e enviar alertas
-        for index, row in six_hour_stats.iterrows():
+        hourly_stats['outlier_percentage'] = (hourly_stats['outliers'] / hourly_stats['total']) * 100
+        # Verificar horas com mais de 10% de outliers e enviar alertas
+        for index, row in hourly_stats.iterrows():
             if row['outlier_percentage'] > 10:
                 mensagem = (
                     f"🚨 Alerta de Outliers 🚨\n"
-                    f"No intervalo iniciado em {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
+                    f"Na hora {index}, {row['outlier_percentage']:.2f}% dos dados foram classificados como outliers.\n"
                     f"📊 Total de dados: {row['total']}, Outliers: {row['outliers']}."
                 )
                 enviar_alerta_telegram(mensagem)
@@ -314,7 +307,7 @@ def SoftSensor(inputData):
         print(last_run_time)
         print(now)
 
-        if (now - last_run_time) >= timedelta(hours=6):
+        if (now - last_run_time) >= timedelta(hours=1):
             # 6 hours have passed, run the process
             processar_outliers(df)
             
