@@ -10,10 +10,6 @@ from .teda_algo import TEDADetect
 import requests
 from datetime import datetime, timedelta, timezone
 # token do bot gerado pelo BotFather (telegram)
-bot_token = "7160209549:AAEgSGm0T-XRbpPwHVROsTFHQNxE4lV8KOc"
-
-# ID do chat para onde as mensagens serão enviadas
-chat_id = "6412205514"
 
 def SoftSensor(inputData):
     load_dotenv()
@@ -23,6 +19,8 @@ def SoftSensor(inputData):
     MYSQL_URL = os.getenv('MYSQL_URL')
     MYSQL_TABLE = os.getenv('MYSQL_TABLE')
     MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
+    bot_token = os.getenv('BOT_TOKEN')
+    chat_id = os.getenv('CHAT_ID')
 
     connection= mysql.connector.connect(
         host=MYSQL_URL,
