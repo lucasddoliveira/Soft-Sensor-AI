@@ -59,7 +59,7 @@ def on_message(client, userdata, message):
 
         if counter == 4 and all(value != 0 for value in leitura[1:6]):
             # Verificar se as leituras dos sensores são iguais à última leitura válida
-            if any(leitura[i] == ultima_leitura[i] for i in range(1, 6)):
+            if all(leitura[i] == ultima_leitura[i] for i in range(1, 6)):
                 print(leitura[1:6])
                 print(ultima_leitura[1:6])
                 print('Leitura duplicada, ignorando pacote.')
